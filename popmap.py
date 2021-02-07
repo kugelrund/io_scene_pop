@@ -93,22 +93,14 @@ def chunks(l, n):
     return [l[i:i + n] for i in range(0, len(l), n)]
 
 
-def blender_add_texture(blend_data, name, path):
-    if not name in blend_data.textures:
-        image = blend_data.images.load(path)
-        texture = blend_data.textures.new(name, type='IMAGE')
-        texture.image = image
-
-
 def blender_add_material(blend_data, name, texture_name):
     if not name in blend_data.materials:
         material = blend_data.materials.new(name)
         material["texture_name"] = texture_name # to add it later on
-        material.use_transparency = True
-        material.alpha = 0
-        material.specular_alpha = 0
-        material.diffuse_intensity = 1
-        material.specular_intensity = 0
+        material.use_nodes = True
+        material.blend_method = 'CLIP'
+        bsdf_node = material.node_tree.nodes['Principled BSDF']
+        bsdf_node.inputs['Specular'].default_value = 0.0
 
 
 def blender_add_mesh(blend_data, name, vertices, faces, uvs, uv_indices,
@@ -119,7 +111,7 @@ def blender_add_mesh(blend_data, name, vertices, faces, uvs, uv_indices,
 
         # add uvs to mesh
         if len(uvs) > 0:
-            mesh.uv_textures.new().name = "UVMap"
+            mesh.uv_layers.new().name = "UVMap"
             uv_data = mesh.uv_layers[0].data
             if len(uv_indices) > 0:
                 for face_index, face in enumerate(mesh.polygons):
@@ -182,11 +174,15 @@ def add_bounding_box_material(blend_data, mesh, group_name):
             material = blend_data.materials[group_name]
         except KeyError:
             material = blend_data.materials.new(group_name)
-            material.diffuse_color = color
-            material.diffuse_intensity = 1
-            material.specular_intensity = 0
-            material.use_transparency = True
-            material.alpha = 0.3
+            material.use_nodes = True
+            material.blend_method = 'BLEND'
+            material.diffuse_color = color + (0.5,)
+            material.roughness = 0.5
+            bsdf_node = material.node_tree.nodes['Principled BSDF']
+            bsdf_node.inputs['Base Color'].default_value = (0, 0, 0, 1)
+            bsdf_node.inputs['Specular'].default_value = 0.0
+            bsdf_node.inputs['Emission'].default_value = color + (1,)
+            bsdf_node.inputs['Alpha'].default_value = 0.2
         mesh.materials.append(material)
         return True
     return False
@@ -739,9 +735,6 @@ def import_wow(path, context, textures_only, wow_hashes):
                         dds.write(reader.read(reader.length -
                                               reader.pos - 4))
 
-                    # add texture to blender
-                    blender_add_texture(blend_data, hash, dds_path)
-
         else:
             assert hash not in object_hashes
 
@@ -750,43 +743,40 @@ def import_wow(path, context, textures_only, wow_hashes):
         return
 
 
+    for area in context.screen.areas:
+        if area.type == 'VIEW_3D':
+            for space in area.spaces:
+                if space.type == 'VIEW_3D':
+                    space.clip_end = max(space.clip_end, 10000)
+
     if not "PoP_Lamp1" in blend_data.objects:
-        lamp1 = blend_data.lamps.new("PoP_Lamp1", 'HEMI')
+        lamp1 = blend_data.lights.new("PoP_Lamp1", 'SUN')
         lamp1.energy = 0.5
-        lamp2 = blend_data.lamps.new("PoP_Lamp2", 'HEMI')
+        lamp2 = blend_data.lights.new("PoP_Lamp2", 'SUN')
         lamp2.energy = 0.3
         object = blend_data.objects.new("PoP_Lamp1", lamp1)
-        scene.objects.link(object)
+        scene.collection.objects.link(object)
         object = blend_data.objects.new("PoP_Lamp2", lamp2)
         object.rotation_euler = (0, 3.14159, 0)
-        scene.objects.link(object)
-    scene.game_settings.material_mode = 'GLSL'
+        scene.collection.objects.link(object)
 
 
     for material_hash in material_hashes:
         material = blend_data.materials[material_hash]
         texture_name = material["texture_name"]
+        texture_path = os.path.join(texture_directory, texture_name + ".dds")
+        bsdf_node = material.node_tree.nodes["Principled BSDF"]
+        texture_node = material.node_tree.nodes.new('ShaderNodeTexImage')
         try:
-            texture = blend_data.textures[texture_name]
-        except KeyError:
-            try:
-                texture_path = os.path.join(texture_directory,
-                                            texture_name + ".dds")
-                texture = blender_add_texture(blend_data, texture_name,
-                                              texture_path)
-            except:
-                print("Missing texture", texture_name, "for material",
-                      material_hash, "!")
-                continue
-        if material.texture_slots[0] is None:
-            mat_texture = material.texture_slots.add()
-            mat_texture.texture = texture
-            mat_texture.texture_coords = 'UV'
-            mat_texture.use_map_color_diffuse = True
-            mat_texture.use_map_alpha = True
-            mat_texture.mapping = 'FLAT'
-            mat_texture.uv_layer = "UVMap"
-            mat_texture.scale = (1, -1, 1)
+            texture_node.image = bpy.data.images.load(texture_path)
+        except:
+            print("Missing texture", texture_name, "for material",
+                  material_hash, "!")
+            continue
+        material.node_tree.links.new(bsdf_node.inputs['Base Color'],
+                                     texture_node.outputs['Color'])
+        material.node_tree.links.new(bsdf_node.inputs['Alpha'],
+                                     texture_node.outputs['Alpha'])
 
 
     for game_object in game_objects:
@@ -839,8 +829,6 @@ def import_wow(path, context, textures_only, wow_hashes):
             object.location = game_object.center
             object.rotation_euler = game_object.rotation.to_euler()
             object.scale = game_object.scale
-            scene.objects.link(object)
-            scene.objects.active = object
 
             if mesh_second is not None:
                 # create object
@@ -907,23 +895,20 @@ def import_wow(path, context, textures_only, wow_hashes):
                 object.show_transparent = True
                 object.show_wire = True
             else:
-                object.draw_type = 'BOUNDS'
-
-            scene.objects.link(object)
-            scene.objects.active = object
+                object.display_type = 'BOUNDS'
 
         object["out_of_file"] = filename
 
         try:
-            group = blend_data.groups[game_object.group]
+            group = blend_data.collections[game_object.group]
         except KeyError:
-            group = blend_data.groups.new(game_object.group)
+            group = blend_data.collections.new(game_object.group)
+            scene.collection.children.link(group)
         group.objects.link(object)
+        context.view_layer.objects.active = object
         if (game_object.group != "Trigger" and
             game_object.group != "Model" and
             game_object.group != "Other" and
             game_object.group != "Portal" and
             game_object.group != "Loading Trigger"):
-            object.hide = True
-
-
+            object.hide_set(True)

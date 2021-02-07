@@ -2,7 +2,7 @@ bl_info = {
     "name": "PoP map",
     "author": "Sphere",
     "version": (0, 1),
-    "blender": (2, 72, 0),
+    "blender": (2, 80, 0),
     "location": "File > Import > PoP map",
     "description": "Import PoP map",
     "category": "Import"}
@@ -23,9 +23,9 @@ class ImportPopWow(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                      "contained map."
     bl_options = {'UNDO'}
 
-    filename_ext = ".dec"
-    filter_glob = StringProperty(default="*.dec", options={'HIDDEN'})
-    filepath = StringProperty(name="File path")
+    filename_ext: ".dec"
+    filter_glob: StringProperty(default="*.dec", options={'HIDDEN'})
+    filepath: StringProperty(name="File path")
 
     def error(self, msg):
         self.report({'ERROR'}, msg)
@@ -46,12 +46,12 @@ class ImportPopWows(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     bl_label = "Import PoP wows"
     bl_options = {'UNDO'}
 
-    filername_ext = ""
-    filter_glob = StringProperty(default="", options={'HIDDEN'})
-    directory = StringProperty(subtype='DIR_PATH')
-    textures_only = BoolProperty(name="Textures only",
-                                 description="Whether to import only the "
-                                             "textures")
+    filername_ext: ""
+    filter_glob: StringProperty(default="", options={'HIDDEN'})
+    directory: StringProperty(subtype='DIR_PATH')
+    textures_only: BoolProperty(name="Textures only",
+                                description="Whether to import only the "
+                                            "textures")
 
     def execute(self, context):
         wow_hashes = popmap.create_wowlist(self.directory)    
@@ -75,9 +75,9 @@ class ImportPopWol(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                      "contained maps."
     bl_options = {'UNDO'}
 
-    filename_ext = ".dec"
-    filter_glob = StringProperty(default="*.dec", options={'HIDDEN'})
-    filepath = StringProperty(name="File path")
+    filename_ext: ".dec"
+    filter_glob: StringProperty(default="*.dec", options={'HIDDEN'})
+    filepath: StringProperty(name="File path")
 
     def error(self, msg):
         self.report({'ERROR'}, msg)
@@ -121,7 +121,7 @@ class ImportPopCurrWol(bpy.types.Operator):
             return {'CANCELLED'}
 
             
-class PoPPanel(bpy.types.Panel):
+class POP_PT_pop_panel(bpy.types.Panel):
     """A Custom Panel in the Viewport Toolbar"""
     bl_label = "PoP Tools"
     bl_space_type = 'VIEW_3D'
@@ -131,7 +131,7 @@ class PoPPanel(bpy.types.Panel):
         layout = self.layout
         object = context.active_object
     
-        if "out_of_file" in object:
+        if object and ("out_of_file" in object):
             row = layout.row()
             row.label(text="Object is from file:")
             row = layout.row()
@@ -159,8 +159,8 @@ def register():
     bpy.utils.register_class(ImportPopWows)
     bpy.utils.register_class(ImportPopWol)
     bpy.utils.register_class(ImportPopCurrWol)
-    bpy.utils.register_class(PoPPanel)
-    bpy.types.INFO_MT_file_import.append(menu_import)
+    bpy.utils.register_class(POP_PT_pop_panel)
+    bpy.types.TOPBAR_MT_file_import.append(menu_import)
 
 
 def unregister():
@@ -168,8 +168,8 @@ def unregister():
     bpy.utils.unregister_class(ImportPopWows)
     bpy.utils.unregister_class(ImportPopWol)
     bpy.utils.unregister_class(ImportPopCurrWol)
-    bpy.utils.unregister_class(PoPPanel)
-    bpy.types.INFO_MT_file_import.remove(menu_import)
+    bpy.utils.unregister_class(POP_PT_pop_panel)
+    bpy.types.TOPBAR_MT_file_import.remove(menu_import)
 
 
 if __name__ == "__main__":
