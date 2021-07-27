@@ -108,7 +108,7 @@ class ImportPopCurrWol(bpy.types.Operator):
             # delete everything
             bpy.ops.object.mode_set(mode='OBJECT')
             for object in context.scene.objects:
-                object.hide = False
+                object.hide_set(False)
             bpy.ops.object.select_all(action='SELECT')
             bpy.ops.object.delete()
             
