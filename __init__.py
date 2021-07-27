@@ -23,7 +23,7 @@ class ImportPopWow(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                      "contained map."
     bl_options = {'UNDO'}
 
-    filename_ext: ".dec"
+    filename_ext = ".dec"
     filter_glob: StringProperty(default="*.dec", options={'HIDDEN'})
     filepath: StringProperty(name="File path")
 
@@ -46,7 +46,7 @@ class ImportPopWows(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
     bl_label = "Import PoP wows"
     bl_options = {'UNDO'}
 
-    filername_ext: ""
+    filename_ext = ""
     filter_glob: StringProperty(default="", options={'HIDDEN'})
     directory: StringProperty(subtype='DIR_PATH')
     textures_only: BoolProperty(name="Textures only",
@@ -75,7 +75,7 @@ class ImportPopWol(bpy.types.Operator, bpy_extras.io_utils.ImportHelper):
                      "contained maps."
     bl_options = {'UNDO'}
 
-    filename_ext: ".dec"
+    filename_ext = ".dec"
     filter_glob: StringProperty(default="*.dec", options={'HIDDEN'})
     filepath: StringProperty(name="File path")
 
