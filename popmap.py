@@ -100,7 +100,7 @@ def blender_add_material(blend_data, name, texture_name):
         material.use_nodes = True
         material.blend_method = 'CLIP'
         bsdf_node = material.node_tree.nodes['Principled BSDF']
-        bsdf_node.inputs['Specular'].default_value = 0.0
+        bsdf_node.inputs['Specular IOR Level'].default_value = 0.0
 
 
 def blender_add_mesh(blend_data, name, vertices, faces, uvs, uv_indices,
@@ -180,8 +180,9 @@ def add_bounding_box_material(blend_data, mesh, group_name):
             material.roughness = 0.5
             bsdf_node = material.node_tree.nodes['Principled BSDF']
             bsdf_node.inputs['Base Color'].default_value = (0, 0, 0, 1)
-            bsdf_node.inputs['Specular'].default_value = 0.0
-            bsdf_node.inputs['Emission'].default_value = color + (1,)
+            bsdf_node.inputs['Specular IOR Level'].default_value = 0.0
+            bsdf_node.inputs['Emission Color'].default_value = color + (1,)
+            bsdf_node.inputs['Emission Strength'].default_value = 0.5
             bsdf_node.inputs['Alpha'].default_value = 0.2
         mesh.materials.append(material)
         return True

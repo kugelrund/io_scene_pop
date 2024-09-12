@@ -1,8 +1,8 @@
 bl_info = {
     "name": "PoP map",
     "author": "Sphere",
-    "version": (0, 2),
-    "blender": (2, 80, 0),
+    "version": (0, 3),
+    "blender": (4, 0, 0),
     "location": "File > Import > PoP map",
     "description": "Import PoP map",
     "category": "Import"}
